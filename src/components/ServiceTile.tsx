@@ -1,0 +1,191 @@
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  ActivityIndicator,
+} from 'react-native';
+import { Service } from '../types';
+import { NO_IMAGE } from '../constants';
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import ShareModal from './ShareModal';
+
+const shareIcon = require('../assets/images/share.png');
+
+interface ServiceTileProps {
+  service: Service;
+  onPress: () => void;
+  imageUrl?: string | null; // ImgBB image URL (from useImgBBImages hook)
+  imageLoading?: boolean; // Whether ImgBB images are still loading
+}
+
+const ServiceTile: React.FC<ServiceTileProps> = ({ service, onPress, imageUrl, imageLoading = false }) => {
+  const [imageLoadingState, setImageLoadingState] = useState(false);
+  const [imageError, setImageError] = useState(false);
+  const [shareModalVisible, setShareModalVisible] = useState(false);
+
+  // Use ImgBB imageUrl if available, otherwise fall back to tileImage or first image
+  // This matches the web app's logic - ImgBB URLs take priority
+  const imageSource = imageUrl || service.tileImage || service.images[0] || NO_IMAGE;
+  
+  // Reset loading state when image source changes
+  useEffect(() => {
+    if (imageSource) {
+      setImageLoadingState(true);
+      setImageError(false);
+    }
+  }, [imageSource]);
+
+  const handleSharePress = (e: any) => {
+    e.stopPropagation(); // Prevent card press
+    setShareModalVisible(true);
+  };
+
+  return (
+    <>
+      <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.8}>
+        <View style={styles.imageContainer}>
+          {(imageLoading || imageLoadingState) && (
+            <View style={styles.loader}>
+              <ActivityIndicator size="small" color="#0066CC" />
+            </View>
+          )}
+          <Image
+            source={{ uri: imageSource }}
+            style={styles.image}
+            onLoadStart={() => setImageLoadingState(true)}
+            onLoadEnd={() => setImageLoadingState(false)}
+            onError={() => {
+              setImageError(true);
+              setImageLoadingState(false);
+            }}
+          />
+          {imageError && (
+            <View style={styles.fallbackContainer}>
+              <Text style={styles.fallbackIcon}>{service.icon}</Text>
+            </View>
+          )}
+          {/* Share Button */}
+          <TouchableOpacity 
+            style={styles.shareButton}
+            onPress={handleSharePress}
+            activeOpacity={0.7}
+          >
+            <Image 
+              source={shareIcon} 
+              style={styles.shareIcon}
+              resizeMode="contain"
+            />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.content}>
+          <Text style={styles.name} numberOfLines={2}>
+            {service.name}
+          </Text>
+          <Text style={styles.description} numberOfLines={2}>
+            {service.description}
+          </Text>
+        </View>
+      </TouchableOpacity>
+
+      {/* Share Modal */}
+      <ShareModal
+        visible={shareModalVisible}
+        onClose={() => setShareModalVisible(false)}
+        serviceName={service.name}
+      />
+    </>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    margin: 6,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  imageContainer: {
+    width: '100%',
+    height: 140,
+    backgroundColor: '#f3f4f6',
+    position: 'relative',
+  },
+  shareButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#ffffff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  shareIcon: {
+    width: 18,
+    height: 18,
+    tintColor: '#0066CC',
+  },
+  image: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  loader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+  },
+  fallbackContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f9fafb',
+  },
+  fallbackIcon: {
+    fontSize: 48,
+    opacity: 0.5,
+  },
+  content: {
+    padding: 10,
+  },
+  name: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginTop: 4,
+    marginBottom: 4,
+  },
+  description: {
+    fontSize: 11,
+    color: '#6b7280',
+    marginBottom: 4,
+    lineHeight: 15,
+  },
+});
+
+export default ServiceTile;
+
