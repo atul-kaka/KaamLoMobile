@@ -1,13 +1,12 @@
 /**
- * Hook to fetch field work images from ImgBB album URL (Mobile Version)
+ * Hook to fetch field work images from Azure Blob Storage (Mobile Version)
  * Matches the web app's useFieldWorkImages hook logic
  */
 
 import { useState, useEffect } from 'react';
-import { fetchFieldWorkImages } from '../services/fieldWorkImageService';
+import { getLocalFieldWorkImages } from '../utils/getLocalFieldWorkImages';
 
-const MIN_LOADER_TIME = 1500; // Minimum 1.5 seconds to show loader (prevents flash)
-const MAX_LOADER_TIME = 30000; // Maximum 30 seconds before giving up (proxies can be slow)
+const MIN_LOADER_TIME = 500; // Minimum 0.5 seconds to show loader (prevents flash)
 
 export interface UseFieldWorkImagesReturn {
   images: string[];
@@ -16,50 +15,38 @@ export interface UseFieldWorkImagesReturn {
 }
 
 /**
- * Hook to fetch field work images from an ImgBB album URL
+ * Hook to fetch field work images from Azure Blob Storage using service ID
  * Hides loader once URLs are fetched (not waiting for images to load)
  */
-export function useFieldWorkImages(albumUrl: string | null | undefined): UseFieldWorkImagesReturn {
+export function useFieldWorkImages(serviceId: string | null | undefined): UseFieldWorkImagesReturn {
   const [images, setImages] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    if (!albumUrl) {
-      console.log('[useFieldWorkImages] No album URL provided');
+    if (!serviceId) {
+      console.log('[useFieldWorkImages] No service ID provided');
       setImages([]);
       setLoading(false);
       return;
     }
 
-    console.log('[useFieldWorkImages] Fetching images from:', albumUrl);
+    console.log('[useFieldWorkImages] Fetching images for service:', serviceId);
     let minLoaderTimeout: ReturnType<typeof setTimeout>;
-    let maxLoaderTimeout: ReturnType<typeof setTimeout>;
     let isMounted = true;
     const startTime = Date.now();
 
-    const fetchImages = async () => {
+    const fetchImages = () => {
       try {
         setLoading(true);
         setError(null);
         setImages([]); // Clear previous images
-        
-        // Set maximum timeout to give up after 30 seconds
-        maxLoaderTimeout = setTimeout(() => {
-          if (isMounted) {
-            console.warn('[useFieldWorkImages] Maximum timeout reached, giving up');
-            setLoading(false);
-          }
-        }, MAX_LOADER_TIME);
 
-        // Fetch image URLs
-        const fetchedImages = await fetchFieldWorkImages(albumUrl, false);
+        // Get image URLs from Azure Blob Storage (synchronous, uses cache)
+        const fetchedImages = getLocalFieldWorkImages(serviceId);
         const elapsedTime = Date.now() - startTime;
         
         if (isMounted) {
-          // Clear max timeout
-          clearTimeout(maxLoaderTimeout);
-          
           // Always set images (even if empty) so we can show "no images" state
           setImages(fetchedImages);
           
@@ -82,7 +69,6 @@ export function useFieldWorkImages(albumUrl: string | null | undefined): UseFiel
           const error = err instanceof Error ? err : new Error('Failed to fetch field work images');
           console.error('[useFieldWorkImages] Error:', error);
           setError(error);
-          clearTimeout(maxLoaderTimeout);
           clearTimeout(minLoaderTimeout);
           setLoading(false);
         }
@@ -96,11 +82,8 @@ export function useFieldWorkImages(albumUrl: string | null | undefined): UseFiel
       if (minLoaderTimeout) {
         clearTimeout(minLoaderTimeout);
       }
-      if (maxLoaderTimeout) {
-        clearTimeout(maxLoaderTimeout);
-      }
     };
-  }, [albumUrl]);
+  }, [serviceId]);
 
   return {
     images,

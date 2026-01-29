@@ -7,11 +7,11 @@
  * DATA STRUCTURE:
  * - id: Unique service identifier (kebab-case)
  * - icon: Emoji or icon for the service
- * - tileImage: Optional tile image (now loaded dynamically from ImgBB URLs)
+ * - tileImage: Image URL from Azure Blob Storage
  * - title: Service title (base language - English)
  * - subtitle: Service description/subtitle (base language - English)
  * - images: Array of "Our Work" image URLs or paths
- * - assetFolder: ImgBB album URL for field work images (e.g., 'https://ibb.co/album/...')
+ * - assetFolder: (Deprecated) Previously used for ImgBB album URL, now field work images are loaded from Azure Blob Storage
  * - whatWeDo: Array of service offerings (base language - English)
  * - faq: Array of FAQ items (base language - English)
  * - serviceArea: Array of service area locations
@@ -21,7 +21,31 @@
  * This file contains only the base data structure.
  */
 
-// Tile images are now loaded dynamically from ImgBB URLs via useImgBBImages hook
+// Azure Blob Storage base URL for home category images
+const AZURE_BLOB_BASE_URL = 'https://kaamlo.blob.core.windows.net/kaamloimages/homecategories/';
+
+// Mapping of service IDs to Azure Blob Storage image filenames
+const HOME_CATEGORY_IMAGES: Record<string, string> = {
+  'websites-mobile-app-development': `${AZURE_BLOB_BASE_URL}websitemobile.jpg`,
+  'solar-setup': `${AZURE_BLOB_BASE_URL}solar.jpg`,
+  'plumber': `${AZURE_BLOB_BASE_URL}plumber.jpg`,
+  'electrician': `${AZURE_BLOB_BASE_URL}electrician.jpg`,
+  'interior-designs': `${AZURE_BLOB_BASE_URL}interior.jpg`,
+  'painting': `${AZURE_BLOB_BASE_URL}painting.jpg`,
+  'construction': `${AZURE_BLOB_BASE_URL}construction.jpg`,
+  'gardening': `${AZURE_BLOB_BASE_URL}gardening.jpg`,
+  'carpentry': `${AZURE_BLOB_BASE_URL}carpentry.jpg`,
+  'furnitures': `${AZURE_BLOB_BASE_URL}furniture.jpg`,
+  'elevations': `${AZURE_BLOB_BASE_URL}elevations.jpg`,
+  'floor-and-tiles': `${AZURE_BLOB_BASE_URL}tiles.jpg`,
+  'glass-homes': `${AZURE_BLOB_BASE_URL}glass.jpg`,
+  'layout-planning': `${AZURE_BLOB_BASE_URL}layout.jpg`,
+  'office-setup': `${AZURE_BLOB_BASE_URL}office.jpg`,
+  'windows-doors-mesh': `${AZURE_BLOB_BASE_URL}doors.jpg`,
+  'steel-iron-railings': `${AZURE_BLOB_BASE_URL}railings.jpg`,
+  'pop-puc-services': `${AZURE_BLOB_BASE_URL}pop.jpg`,
+  'raw-materials': `${AZURE_BLOB_BASE_URL}rawmaterials.jpg`,
+};
 
 export interface Website {
   name: string;
@@ -32,11 +56,11 @@ export interface Website {
 export interface ServiceData {
   id: string;
   icon: string;
-  tileImage?: string | null; // Optional - now loaded dynamically from ImgBB URLs
+  tileImage?: string | null; // Image URL from Azure Blob Storage
   title: string;
   subtitle: string;
   images: string[]; // "Our Work" images - URLs or paths
-  assetFolder: string; // ImgBB album URL for field work images
+  assetFolder?: string; // (Deprecated) Previously used for ImgBB album URL, now field work images are loaded from Azure Blob Storage at https://kaamlo.blob.core.windows.net/kaamloimages/fieldwork/[serviceId]/
   whatWeDo: string[];
   faq: Array<{ question: string; answer: string }>;
   serviceArea: string[];
@@ -51,7 +75,7 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
   'websites-mobile-app-development': {
     id: 'websites-mobile-app-development',
     icon: '💻',
-    tileImage: null, // Loaded dynamically from ImgBB
+    tileImage: HOME_CATEGORY_IMAGES['websites-mobile-app-development'],
     title: 'Website and Mobile App Development',
     subtitle: 'Professional website and mobile app development services to help your business establish a strong online presence and reach customers on all devices',
     images: [
@@ -142,7 +166,7 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
   'solar-setup': {
     id: 'solar-setup',
     icon: '☀️',
-    tileImage: null, // Loaded dynamically from ImgBB
+    tileImage: HOME_CATEGORY_IMAGES['solar-setup'],
     title: 'Solar Setup',
     subtitle: 'Professional solar panel installation and renewable energy solutions',
     images: [
@@ -208,7 +232,7 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
   'plumber': {
     id: 'plumber',
     icon: '🔧',
-    tileImage: null, // Loaded from ImgBB album (assetFolder)
+    tileImage: HOME_CATEGORY_IMAGES['plumber'],
     title: 'Plumber',
     subtitle: 'Professional plumbing services for your home and business',
     images: [
@@ -268,7 +292,7 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
   'electrician': {
     id: 'electrician',
     icon: '⚡',
-    tileImage: null, // Loaded dynamically from ImgBB
+    tileImage: HOME_CATEGORY_IMAGES['electrician'],
     title: 'Electrician',
     subtitle: 'Expert electrical solutions for residential and commercial needs',
     images: [
@@ -328,7 +352,7 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
   'interior-designs': {
     id: 'interior-designs',
     icon: '🎨',
-    tileImage: null, // Loaded dynamically from ImgBB
+    tileImage: HOME_CATEGORY_IMAGES['interior-designs'],
     title: 'Interior Designs',
     subtitle: 'Transform your space with beautiful and functional interior designs',
     images: [
@@ -371,7 +395,7 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
   'elevations': {
     id: 'elevations',
     icon: '🏗️',
-    tileImage: null, // Loaded dynamically from ImgBB
+    tileImage: HOME_CATEGORY_IMAGES['elevations'],
     title: 'Elevations',
     subtitle: 'Professional elevation design and construction services',
     images: [
@@ -427,7 +451,7 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
   'furnitures': {
     id: 'furnitures',
     icon: '🪑',
-    tileImage: null, // Loaded dynamically from ImgBB
+    tileImage: HOME_CATEGORY_IMAGES['furnitures'],
     title: 'Furnitures',
     subtitle: 'Quality furniture solutions for every room in your home',
     images: [
@@ -470,7 +494,7 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
   'raw-materials': {
     id: 'raw-materials',
     icon: '🧱',
-    tileImage: null, // Loaded from ImgBB album (assetFolder)
+    tileImage: HOME_CATEGORY_IMAGES['raw-materials'],
     title: 'Raw Materials Supply',
     subtitle: 'Quality raw materials for construction and manufacturing',
     images: [
@@ -513,7 +537,7 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
   'windows-doors-mesh': {
     id: 'windows-doors-mesh',
     icon: '🪟',
-    tileImage: null, // Loaded dynamically from ImgBB
+    tileImage: HOME_CATEGORY_IMAGES['windows-doors-mesh'],
     title: 'Windows, Doors & Mesh',
     subtitle: 'Premium windows, doors and mesh solutions',
     images: [
@@ -556,7 +580,7 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
   'steel-iron-railings': {
     id: 'steel-iron-railings',
     icon: '🛡️',
-    tileImage: null, // Loaded from ImgBB album (assetFolder)
+    tileImage: HOME_CATEGORY_IMAGES['steel-iron-railings'],
     title: 'Steel & Iron Railings',
     subtitle: 'Durable and elegant steel and iron railing solutions',
     images: [
@@ -599,7 +623,7 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
   'glass-homes': {
     id: 'glass-homes',
     icon: '🪟',
-    tileImage: null, // Loaded dynamically from ImgBB
+    tileImage: HOME_CATEGORY_IMAGES['glass-homes'],
     title: 'Glass for Homes',
     subtitle: 'Premium glass solutions for modern homes',
     images: [
@@ -642,7 +666,7 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
   'pop-puc-services': {
     id: 'pop-puc-services',
     icon: '🏛️',
-    tileImage: null, // Loaded from ImgBB album (assetFolder)
+    tileImage: HOME_CATEGORY_IMAGES['pop-puc-services'],
     title: 'PoP & PUC Services',
     subtitle: 'Professional PoP (Plaster of Paris) and PUC (Pollution Under Control) services',
     images: [
@@ -685,7 +709,7 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
   'layout-planning': {
     id: 'layout-planning',
     icon: '📐',
-    tileImage: null, // Loaded dynamically from ImgBB
+    tileImage: HOME_CATEGORY_IMAGES['layout-planning'],
     title: 'Layout Planning',
     subtitle: 'Professional space planning and layout design services for homes and commercial spaces',
     images: [
@@ -751,7 +775,7 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
   'painting': {
     id: 'painting',
     icon: '🎨',
-    tileImage: null, // Loaded from ImgBB album (assetFolder)
+    tileImage: HOME_CATEGORY_IMAGES['painting'],
     title: 'Painting Services',
     subtitle: 'Professional interior and exterior painting services for homes and commercial spaces',
     images: [
@@ -817,7 +841,7 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
   'floor-and-tiles': {
     id: 'floor-and-tiles',
     icon: '🧱',
-    tileImage: null, // Loaded from ImgBB album (assetFolder)
+    tileImage: HOME_CATEGORY_IMAGES['floor-and-tiles'],
     title: 'Floor & Tiles',
     subtitle: 'Professional flooring and tiling solutions for homes and commercial spaces',
     images: [
@@ -883,7 +907,7 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
   'carpentry': {
     id: 'carpentry',
     icon: '🪵',
-    tileImage: null, // Loaded from ImgBB album (assetFolder)
+    tileImage: HOME_CATEGORY_IMAGES['carpentry'],
     title: 'Carpentry & Woodwork',
     subtitle: 'Expert carpentry and woodwork services for custom furniture and home improvements',
     images: [
@@ -949,7 +973,7 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
   'office-setup': {
     id: 'office-setup',
     icon: '🏢',
-    tileImage: null, // Loaded dynamically from ImgBB
+    tileImage: HOME_CATEGORY_IMAGES['office-setup'],
     title: 'Office Setup',
     subtitle: 'Complete office setup and workspace solutions for businesses',
     images: [
@@ -1015,7 +1039,7 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
   'gardening': {
     id: 'gardening',
     icon: '🌳',
-    tileImage: null, // Loaded dynamically from ImgBB
+    tileImage: HOME_CATEGORY_IMAGES['gardening'],
     title: 'Gardening & Landscaping',
     subtitle: 'Professional gardening and landscaping services for homes and commercial spaces',
     images: [
@@ -1081,7 +1105,7 @@ export const SERVICES_DATA: Record<string, ServiceData> = {
   'construction': {
     id: 'construction',
     icon: '🏗️',
-    tileImage: null, // Loaded dynamically from ImgBB
+    tileImage: HOME_CATEGORY_IMAGES['construction'],
     title: 'Construction Services',
     subtitle: 'Complete construction and building solutions for residential and commercial projects',
     images: [

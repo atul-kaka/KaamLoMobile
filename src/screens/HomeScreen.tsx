@@ -21,7 +21,6 @@ import { CONTACT_INFO } from '../constants';
 import ServiceTile from '../components/ServiceTile';
 import ShareModal from '../components/ShareModal';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { useImgBBImages } from '../hooks/useImgBBImages';
 
 const hamburgerIcon = require('../assets/images/hamburger.png');
 const shareIcon = require('../assets/images/share.png');
@@ -37,8 +36,7 @@ const HomeScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [shareModalVisible, setShareModalVisible] = useState(false);
 
-  // Fetch ImgBB image URLs dynamically (matches web app logic)
-  const { imageUrls, loading: imagesLoading } = useImgBBImages();
+  // Images are now loaded directly from Azure Blob Storage URLs in servicesData.ts
 
   // Load services from data
   useEffect(() => {
@@ -70,8 +68,6 @@ const HomeScreen: React.FC = () => {
   const renderService = ({ item }: { item: Service }) => (
     <ServiceTile 
       service={item}
-      imageUrl={imageUrls[item.id] || null}
-      imageLoading={imagesLoading}
       onPress={() => navigation.navigate('ServiceDetails', { serviceId: item.id as any })} 
     />
   );

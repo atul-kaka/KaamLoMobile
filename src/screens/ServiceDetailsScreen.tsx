@@ -42,8 +42,8 @@ const ServiceDetailsScreen: React.FC = () => {
   const [shareModalVisible, setShareModalVisible] = useState(false);
 
   // Fetch field work images using hook (matches web app logic)
-  const assetFolderUrl = service?.assetFolder || null;
-  const { images: fieldWorkImages, loading: fieldWorkLoading } = useFieldWorkImages(assetFolderUrl);
+  // Now uses service ID instead of assetFolder URL
+  const { images: fieldWorkImages, loading: fieldWorkLoading } = useFieldWorkImages(serviceId);
 
 
   useEffect(() => {

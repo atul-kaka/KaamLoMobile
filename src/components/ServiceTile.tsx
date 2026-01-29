@@ -17,26 +17,31 @@ const shareIcon = require('../assets/images/share.png');
 interface ServiceTileProps {
   service: Service;
   onPress: () => void;
-  imageUrl?: string | null; // ImgBB image URL (from useImgBBImages hook)
-  imageLoading?: boolean; // Whether ImgBB images are still loading
 }
 
-const ServiceTile: React.FC<ServiceTileProps> = ({ service, onPress, imageUrl, imageLoading = false }) => {
-  const [imageLoadingState, setImageLoadingState] = useState(false);
+const ServiceTile: React.FC<ServiceTileProps> = ({ service, onPress }) => {
+  const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [imageLoading, setImageLoading] = useState(true);
   const [shareModalVisible, setShareModalVisible] = useState(false);
 
-  // Use ImgBB imageUrl if available, otherwise fall back to tileImage or first image
-  // This matches the web app's logic - ImgBB URLs take priority
-  const imageSource = imageUrl || service.tileImage || service.images[0] || NO_IMAGE;
+  // Use Azure Blob Storage tileImage URL directly
+  const imageSource = service.tileImage || service.images[0] || null;
+  const hasValidImage = imageSource && imageSource !== NO_IMAGE;
   
-  // Reset loading state when image source changes
+  // Reset state when image source changes
   useEffect(() => {
-    if (imageSource) {
-      setImageLoadingState(true);
+    if (hasValidImage) {
+      setImageLoaded(false);
       setImageError(false);
+      setImageLoading(true);
+      console.log(`[ServiceTile] Loading image for ${service.id}:`, imageSource);
+    } else {
+      setImageError(true);
+      setImageLoaded(false);
+      setImageLoading(false);
     }
-  }, [imageSource]);
+  }, [imageSource, service.id, hasValidImage]);
 
   const handleSharePress = (e: any) => {
     e.stopPropagation(); // Prevent card press
@@ -47,25 +52,42 @@ const ServiceTile: React.FC<ServiceTileProps> = ({ service, onPress, imageUrl, i
     <>
       <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.8}>
         <View style={styles.imageContainer}>
-          {(imageLoading || imageLoadingState) && (
+          {/* Show emoji icon as placeholder while loading or if error */}
+          {(!imageLoaded || imageError) && (
+            <View style={[styles.fallbackContainer, imageLoaded && styles.fallbackHidden]}>
+              <Text style={styles.fallbackIcon}>{service.icon}</Text>
+            </View>
+          )}
+          
+          {/* Show loading indicator while image is loading */}
+          {hasValidImage && imageLoading && !imageError && (
             <View style={styles.loader}>
               <ActivityIndicator size="small" color="#0066CC" />
             </View>
           )}
-          <Image
-            source={{ uri: imageSource }}
-            style={styles.image}
-            onLoadStart={() => setImageLoadingState(true)}
-            onLoadEnd={() => setImageLoadingState(false)}
-            onError={() => {
-              setImageError(true);
-              setImageLoadingState(false);
-            }}
-          />
-          {imageError && (
-            <View style={styles.fallbackContainer}>
-              <Text style={styles.fallbackIcon}>{service.icon}</Text>
-            </View>
+          
+          {/* Always render image so it can load, but hide it until loaded */}
+          {hasValidImage && (
+            <Image
+              source={{ uri: imageSource! }}
+              style={[styles.image, !imageLoaded && styles.imageLoading]}
+              onLoadStart={() => {
+                setImageLoading(true);
+                setImageError(false);
+              }}
+              onLoadEnd={() => {
+                console.log(`[ServiceTile] Image loaded successfully for ${service.id}`);
+                setImageLoaded(true);
+                setImageError(false);
+                setImageLoading(false);
+              }}
+              onError={(error) => {
+                console.warn(`[ServiceTile] Failed to load image for ${service.id}:`, imageSource, error.nativeEvent?.error || 'Unknown error');
+                setImageError(true);
+                setImageLoaded(false);
+                setImageLoading(false);
+              }}
+            />
           )}
           {/* Share Button */}
           <TouchableOpacity 
@@ -144,6 +166,14 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  imageLoading: {
+    opacity: 0,
   },
   loader: {
     position: 'absolute',
@@ -163,11 +193,18 @@ const styles = StyleSheet.create({
     bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f9fafb',
+    backgroundColor: '#f3f4f6',
+    zIndex: 1,
+  },
+  fallbackHidden: {
+    zIndex: 0,
+    opacity: 0,
   },
   fallbackIcon: {
-    fontSize: 48,
-    opacity: 0.5,
+    fontSize: 64,
+    textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   content: {
     padding: 10,
