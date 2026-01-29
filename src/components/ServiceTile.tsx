@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -23,11 +23,53 @@ const ServiceTile: React.FC<ServiceTileProps> = ({ service, onPress }) => {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
+  const [retryCount, setRetryCount] = useState(0);
+  const [imageKey, setImageKey] = useState(0); // Key to force Image remount on retry
   const [shareModalVisible, setShareModalVisible] = useState(false);
+  const retryTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const loadTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   // Use Azure Blob Storage tileImage URL directly
   const imageSource = service.tileImage || service.images[0] || null;
   const hasValidImage = imageSource && imageSource !== NO_IMAGE;
+  
+  // Handle image error with retry logic
+  const handleImageError = React.useCallback(() => {
+    if (loadTimeoutRef.current) {
+      clearTimeout(loadTimeoutRef.current);
+      loadTimeoutRef.current = null;
+    }
+    
+    setRetryCount(currentRetryCount => {
+      if (currentRetryCount < 3 && hasValidImage && imageSource) {
+        const delay = Math.min(1000 * Math.pow(2, currentRetryCount), 5000); // Exponential backoff: 1s, 2s, 4s
+        console.log(`[ServiceTile] Retrying image load for ${service.id} (attempt ${currentRetryCount + 1}/3) after ${delay}ms`);
+        
+        retryTimeoutRef.current = setTimeout(() => {
+          setRetryCount(prev => prev + 1);
+          setImageKey(prev => prev + 1); // Force Image remount with new key
+          setImageError(false);
+          setImageLoading(true);
+          
+          // Reset load timeout for retry
+          loadTimeoutRef.current = setTimeout(() => {
+            setImageError(true);
+            setImageLoaded(false);
+            setImageLoading(false);
+            console.error(`[ServiceTile] Image load timeout for ${service.id} on retry`);
+          }, 15000);
+        }, delay);
+        return currentRetryCount;
+      } else {
+        // Max retries reached, show error state
+        console.error(`[ServiceTile] Max retries reached for ${service.id}. Image failed to load after ${currentRetryCount} attempts.`);
+        setImageError(true);
+        setImageLoaded(false);
+        setImageLoading(false);
+        return currentRetryCount;
+      }
+    });
+  }, [hasValidImage, imageSource, service.id]);
   
   // Reset state when image source changes
   useEffect(() => {
@@ -35,13 +77,33 @@ const ServiceTile: React.FC<ServiceTileProps> = ({ service, onPress }) => {
       setImageLoaded(false);
       setImageError(false);
       setImageLoading(true);
+      setRetryCount(0);
+      setImageKey(0);
       console.log(`[ServiceTile] Loading image for ${service.id}:`, imageSource);
+      
+      // Set a timeout for image loading (15 seconds)
+      loadTimeoutRef.current = setTimeout(() => {
+        console.warn(`[ServiceTile] Image load timeout for ${service.id}, will retry...`);
+        handleImageError();
+      }, 15000);
     } else {
       setImageError(true);
       setImageLoaded(false);
       setImageLoading(false);
     }
-  }, [imageSource, service.id, hasValidImage]);
+    
+    // Cleanup timeouts on unmount or source change
+    return () => {
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+        retryTimeoutRef.current = null;
+      }
+      if (loadTimeoutRef.current) {
+        clearTimeout(loadTimeoutRef.current);
+        loadTimeoutRef.current = null;
+      }
+    };
+  }, [imageSource, service.id, hasValidImage, handleImageError]);
 
   const handleSharePress = (e: any) => {
     e.stopPropagation(); // Prevent card press
@@ -67,25 +129,59 @@ const ServiceTile: React.FC<ServiceTileProps> = ({ service, onPress }) => {
           )}
           
           {/* Always render image so it can load, but hide it until loaded */}
+          {/* Use key prop to force remount on retry */}
           {hasValidImage && (
             <Image
-              source={{ uri: imageSource! }}
+              key={`${service.id}-${imageKey}`}
+              source={{ 
+                uri: imageSource!,
+                cache: 'force-cache', // Use cache for better performance
+              }}
               style={[styles.image, !imageLoaded && styles.imageLoading]}
               onLoadStart={() => {
                 setImageLoading(true);
                 setImageError(false);
+                if (loadTimeoutRef.current) {
+                  clearTimeout(loadTimeoutRef.current);
+                }
+                // Set new timeout for this load attempt
+                loadTimeoutRef.current = setTimeout(() => {
+                  console.warn(`[ServiceTile] Image load timeout for ${service.id}`);
+                  handleImageError();
+                }, 15000);
+                
+                // Special logging for problematic services
+                if (service.id === 'solar-setup' || service.id === 'interior-designs') {
+                  console.log(`[ServiceTile] Starting load for ${service.id}:`, imageSource);
+                }
               }}
               onLoadEnd={() => {
-                console.log(`[ServiceTile] Image loaded successfully for ${service.id}`);
+                if (loadTimeoutRef.current) {
+                  clearTimeout(loadTimeoutRef.current);
+                  loadTimeoutRef.current = null;
+                }
                 setImageLoaded(true);
                 setImageError(false);
                 setImageLoading(false);
+                setRetryCount(0); // Reset retry count on success
+                
+                // Special logging for problematic services
+                if (service.id === 'solar-setup' || service.id === 'interior-designs') {
+                  console.log(`[ServiceTile] ✅ Image loaded successfully for ${service.id} after ${retryCount} retries`);
+                } else {
+                  console.log(`[ServiceTile] Image loaded successfully for ${service.id}`);
+                }
               }}
               onError={(error) => {
-                console.warn(`[ServiceTile] Failed to load image for ${service.id}:`, imageSource, error.nativeEvent?.error || 'Unknown error');
-                setImageError(true);
-                setImageLoaded(false);
-                setImageLoading(false);
+                const errorMsg = error.nativeEvent?.error || 'Unknown error';
+                console.warn(`[ServiceTile] ❌ Failed to load image for ${service.id}:`, imageSource, errorMsg);
+                
+                // Special logging for problematic services
+                if (service.id === 'solar-setup' || service.id === 'interior-designs') {
+                  console.warn(`[ServiceTile] ⚠️ ${service.id} image failed. Retry count: ${retryCount}/3`);
+                }
+                
+                handleImageError();
               }}
             />
           )}

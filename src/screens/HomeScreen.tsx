@@ -45,6 +45,15 @@ const HomeScreen: React.FC = () => {
         const allServices = getAllServicesFromData(language);
         setServices(allServices);
         setLoading(false);
+        
+        // Preload images for better reliability (especially for solar-setup and interior-designs)
+        allServices.forEach(service => {
+          if (service.tileImage) {
+            Image.prefetch(service.tileImage).catch(err => {
+              console.warn(`[HomeScreen] Failed to preload image for ${service.id}:`, err);
+            });
+          }
+        });
       } catch (error) {
         console.error('Error loading services:', error);
         setLoading(false);
